@@ -1,14 +1,14 @@
 # Copyright © 2021 rdbende <rdbende@gmail.com>
 
-# A stunning dark theme for ttk based on Microsoft's Sun Valley visual style 
+# A stunning light theme for ttk based on Microsoft's Sun Valley visual style 
 
 package require Tk 8.6
 
-namespace eval ttk::theme::sun-valley-dark {
+namespace eval ttk::theme::sun-valley-light {
     variable version 1.0
-    package provide ttk::theme::sun-valley-dark $version
+    package provide ttk::theme::sun-valley-light $version
 
-    ttk::style theme create sun-valley-dark -parent clam -settings {
+    ttk::style theme create sun-valley-light -parent clam -settings {
         proc load_images {imgdir} {
             variable images
             foreach file [glob -directory $imgdir *.png] {
@@ -17,12 +17,12 @@ namespace eval ttk::theme::sun-valley-dark {
             }
         }
 
-        load_images [file join [file dirname [info script]] dark]
+        load_images [file join [file dirname [info script]] light]
 
         array set colors {
-            -fg             "#ffffff"
-            -bg             "#1c1c1c"
-            -disabledfg     "#595959"
+            -fg             "#202020"
+            -bg             "#fafafa"
+            -disabledfg     "#a0a0a0"
             -selectfg       "#ffffff"
             -selectbg       "#2f60d8"
         }
@@ -190,8 +190,9 @@ namespace eval ttk::theme::sun-valley-dark {
         ttk::style configure TButton -padding {8 4} -anchor center -foreground $colors(-fg)
 
         ttk::style map TButton -foreground \
-            [list disabled #7a7a7a \
-                pressed #d0d0d0]
+            [list disabled #a2a2a2 \
+                pressed #636363 \
+                active #1a1a1a]
 
         ttk::style element create Button.button image \
             [list $images(button-rest) \
@@ -238,11 +239,11 @@ namespace eval ttk::theme::sun-valley-dark {
         ttk::style element create OptionMenu.indicator image $images(arrow-down) -width 28 -sticky {}
 
         # Accent.TButton
-        ttk::style configure Accent.TButton -padding {8 4} -anchor center -foreground #000000
+        ttk::style configure Accent.TButton -padding {8 4} -anchor center -foreground #ffffff
 
         ttk::style map Accent.TButton -foreground \
-            [list pressed #25536a \
-                disabled #a5a5a5]
+            [list disabled #ffffff \
+                pressed #c1d8ee]
 
         ttk::style element create AccentButton.button image \
             [list $images(button-accent-rest) \
@@ -287,11 +288,12 @@ namespace eval ttk::theme::sun-valley-dark {
         ttk::style configure Toggle.TButton -padding {8 4 8 4} -anchor center -foreground $colors(-fg)
 
         ttk::style map Toggle.TButton -foreground \
-            [list {selected disabled} #a5a5a5 \
-                {selected pressed} #d0d0d0 \
-                selected #000000 \
-                pressed #25536a \
-                disabled #7a7a7a
+            [list {selected disabled} #ffffff \
+                {selected pressed} #636363 \
+                selected #ffffff \
+                pressed #c1d8ee \
+                disabled #a2a2a2 \
+                active #1a1a1a
             ]
 
         ttk::style element create ToggleButton.button image \
@@ -363,8 +365,9 @@ namespace eval ttk::theme::sun-valley-dark {
         ttk::style configure TEntry -foreground $colors(-fg)
 
         ttk::style map TEntry -foreground \
-            [list disabled #757575 \
-                pressed #cfcfcf
+            [list disabled #0a0a0a \
+                pressed #636363 \
+                active #626262
             ]
 
         ttk::style element create Entry.field \
@@ -379,12 +382,13 @@ namespace eval ttk::theme::sun-valley-dark {
         # Combobox
         ttk::style configure TCombobox -foreground $colors(-fg)
 
-        ttk::style map TCombobox -foreground \
-            [list disabled #757575 \
-                pressed #cfcfcf
-            ]
-
         ttk::style configure ComboboxPopdownFrame -borderwidth 1 -relief solid
+
+        ttk::style map TCombobox -foreground \
+            [list disabled #0a0a0a \
+                pressed #636363 \
+                active #626262
+            ]
 
         ttk::style map TCombobox -selectbackground [list \
             {readonly hover} $colors(-selectbg) \
@@ -412,8 +416,9 @@ namespace eval ttk::theme::sun-valley-dark {
         ttk::style configure TSpinbox -foreground $colors(-fg)
 
         ttk::style map TSpinbox -foreground \
-            [list disabled #757575 \
-                pressed #cfcfcf
+            [list disabled #0a0a0a \
+                pressed #636363 \
+                active #626262
             ]
 
         ttk::style element create Spinbox.field \
@@ -472,10 +477,10 @@ namespace eval ttk::theme::sun-valley-dark {
                 user1 $images(arrow-down) \
             ] -width 26 -sticky {}
 
-        ttk::style configure Treeview -background $colors(-bg) -rowheight [expr {[font metrics font -linespace] + 2}]
+        ttk::style configure Treeview -foregound #1a1a1a -background $colors(-bg) -rowheight [expr {[font metrics font -linespace] + 2}]
         ttk::style map Treeview \
-            -background [list selected #292929] \
-            -foreground [list selected $colors(-selectfg)]
+            -background [list selected #f0f0f0] \
+            -foreground [list selected #191919]
 
         # Panedwindow
         # Insane hack to remove clam's ugly sash

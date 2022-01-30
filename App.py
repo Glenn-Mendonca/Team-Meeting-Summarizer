@@ -1,26 +1,18 @@
-import tkinter as tk
-import tkinter.ttk as ttk
+from Include.Dependencies.Initial import *
+from Include.Dependencies.Splash import Splash
+from Include.Dependencies.Scrapper import *
 from tkinter.constants import (
-    BOTTOM,
-    HORIZONTAL,
     LEFT,
-    NSEW,
-    TRUE,
+    NORMAL,
     WORD,
-    END,
-    RIGHT,
-    BOTH,
-    X,
+    END
 )
 import ctypes
 from datetime import datetime
-
-
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
-
 themes = ["light", "dark"]
 
-
+# App Definition
 class App(tk.Tk):
     # App Constructor
     def __init__(self):
@@ -28,20 +20,21 @@ class App(tk.Tk):
         self.title("Team Meetings Summarizer")
         self.geometry("900x800")
         self.resizable(False, False)
-        self.iconbitmap("./Images/icon.ico")
+        self.iconbitmap("./Include/Images/icon.ico")
         self.tk.call("source", "sun-valley.tcl")
         self.theme = 0
         self.play_state = False
+        self.final_transcript, self.meet_code, self.generated_transcript, self.speaker, self.prev_speaker = "", "", "", "", ""
         self.Title, self.Agenda = tk.StringVar(), tk.StringVar()
+        self.scrapper = Scrapper()
+        self.initial()
+        self.Start()
         self.main()
-
-    # Splash Screen
-    def splash(self):
-        pass
 
     # Initial Screen
     def initial(self):
-        pass
+        window = Initial(self, self.getcode)
+        window.grab_set()
 
     # Main Screen
     def main(self):
@@ -72,8 +65,10 @@ class App(tk.Tk):
         self.transcript = tk.Text(
             self.transcript_frame, wrap=WORD, bd=0, height=25, width=35
         )
-        self.transcript.insert(END, "Input Transcript Data")  # <---->#
+        #self.transcript.insert(END, self.final_transcript)  # <---->#
         self.transcript.pack(pady=10, padx=10)
+        self.transcript.config(state=NORMAL)
+        #self.transcript.after(1000,self.update_transcript)
         self.transcript_frame.pack(side=LEFT, padx=20)
 
         # Agenda Frame
@@ -96,7 +91,7 @@ class App(tk.Tk):
         )
         # Play/Pause Button
         self.play_icon = tk.PhotoImage(
-            file=f"./Images/{themes[(self.theme+1)%2]}/play.png"
+            file=f"./Include/Images/{themes[(self.theme+1)%2]}/play.png"
         )
         
         self.play = tk.Button(
@@ -111,7 +106,7 @@ class App(tk.Tk):
 
         # Stop Button
         self.stop_icon = tk.PhotoImage(
-            file=f"./Images/{themes[(self.theme+1)%2]}/stop.png"
+            file=f"./Include/Images/{themes[(self.theme+1)%2]}/stop.png"
         )
         self.stop = tk.Button(
             self.menu_frame,
@@ -125,7 +120,7 @@ class App(tk.Tk):
 
         # Theme Button
         self.mode_icon = tk.PhotoImage(
-            file=f"./Images/{themes[(self.theme+1)%2]}/theme.png"
+            file=f"./Include/Images/{themes[(self.theme+1)%2]}/theme.png"
         )
         self.mode = tk.Button(
             self.menu_frame,
@@ -148,10 +143,10 @@ class App(tk.Tk):
     def pause_play(self):
         try:
             self.play_icon = tk.PhotoImage(
-                file=f"./Images/{themes[(self.theme+1)%2]}/play.png"
+                file=f"./Include/Images/{themes[(self.theme+1)%2]}/play.png"
             )
             self.pause_icon = tk.PhotoImage(
-                file=f"./Images/{themes[(self.theme+1)%2]}/pause.png"
+                file=f"./Include/Images/{themes[(self.theme+1)%2]}/pause.png"
             )
             self.play_state = not self.play_state
             if self.play_state:
@@ -169,16 +164,16 @@ class App(tk.Tk):
         self.tk.call("set_theme", themes[self.theme % 2])
         try:
             self.play_icon = tk.PhotoImage(
-                file=f"./Images/{themes[(self.theme+1)%2]}/play.png"
+                file=f"./Include/Images/{themes[(self.theme+1)%2]}/play.png"
             )
             self.pause_icon = tk.PhotoImage(
-                file=f"./Images/{themes[(self.theme+1)%2]}/pause.png"
+                file=f"./Include/Images/{themes[(self.theme+1)%2]}/pause.png"
             )
             self.stop_icon = tk.PhotoImage(
-                file=f"./Images/{themes[(self.theme+1)%2]}/stop.png"
+                file=f"./Include/Images/{themes[(self.theme+1)%2]}/stop.png"
             )
             self.mode_icon = tk.PhotoImage(
-                file=f"./Images/{themes[(self.theme+1)%2]}/theme.png"
+                file=f"./Include/Images/{themes[(self.theme+1)%2]}/theme.png"
             )
             if self.play_state:
                 self.play.configure(image=self.pause_icon)
@@ -196,11 +191,58 @@ class App(tk.Tk):
         self.time.configure(text=str(current_time))
         self.time.after(1000, self.update_time)
 
+    # Update Transcript Text
+    def update_transcript(self):
+        self.scrapper.extractcaptions(self.getdata)
+        if(self.play_state and self.generated_transcript!=""):
+            self.transcript.delete(1.0, END)
+            if(self.prev_speaker != self.speaker):
+                self.final_transcript += "\n" + self.speaker + "\n"
+                self.prev_speaker = self.speaker
+            self.final_transcript += self.generated_transcript
+            self.generated_transcript = ""
+            self.transcript.insert(END, self.final_transcript)
+        self.after(5000, self.update_transcript)
+
+    # Start Meet Bot
+    def Start(self):
+        if(self.meet_code.isalnum()):
+            if(self.scrapper.login(self.meet_code)):
+                print("All processes went smoothly")
+                self.after(1, self.update_transcript)
+            else:
+                print("Some Error occured !")
+        else:
+            self.after(1000, self.Start)
+
+    #Stop Meet Bot
     def Stop(self):
-        print("Stopping")
+        self.scrapper.driver.quit()
+        location = f'./Transcripts/{self.title}.txt'
+        with open(location, 'x') as file:
+            file.write(self.transcript)
+            messagebox.showinfo('Transcript Info',f'Generated Transcript is saved at {os.path.abspath(location)}')
+            time.sleep(5)
+            print("Stopping")
+        self.destroy()
+
+    # Get Meet Code
+    def getcode(self, code):
+        self.meet_code = code
+
+    # Get Transcript Data
+    def getdata(self, data):
+        if(data['Speaker']!="" and data['Transcript']!=""):
+            self.speaker = data['Speaker']
+            self.generated_transcript = data['Transcript']
+
+# Splash Screen
+def splash():
+    splash = Splash()
+    splash.mainloop()
 
 
 if __name__ == "__main__":
-    exec(open("./splash.py").read())
+    splash()
     app = App()
     app.mainloop()
