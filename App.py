@@ -25,7 +25,6 @@ class App(tk.Tk):
         self.theme = 0
         self.play_state = False
         self.final_transcript, self.meet_code, self.generated_transcript, self.speaker, self.prev_speaker = "", "", "", "", ""
-        self.Title, self.Agenda = tk.StringVar(), tk.StringVar()
         self.scrapper = Scrapper()
         self.initial()
         self.Start()
@@ -44,7 +43,6 @@ class App(tk.Tk):
         )
         # Title Textbox
         self.title = tk.Text(self.title_frame, wrap=WORD, bd=0, height=2, width=35)
-        self.title.insert(END, self.Title)
         self.title.pack(pady=10, padx=10)
         self.title_frame.pack(pady=10)
 
@@ -65,10 +63,8 @@ class App(tk.Tk):
         self.transcript = tk.Text(
             self.transcript_frame, wrap=WORD, bd=0, height=25, width=35
         )
-        #self.transcript.insert(END, self.final_transcript)  # <---->#
         self.transcript.pack(pady=10, padx=10)
         self.transcript.config(state=NORMAL)
-        #self.transcript.after(1000,self.update_transcript)
         self.transcript_frame.pack(side=LEFT, padx=20)
 
         # Agenda Frame
@@ -77,7 +73,6 @@ class App(tk.Tk):
         )
         # Agenda Textbox
         self.agenda = tk.Text(self.agenda_frame, wrap=WORD, bd=0, height=25, width=35)
-        self.agenda.insert("end", self.agenda)
         self.agenda.pack(pady=10, padx=10)
         self.agenda_frame.pack(side=LEFT, padx=20)
 
@@ -218,9 +213,11 @@ class App(tk.Tk):
     #Stop Meet Bot
     def Stop(self):
         self.scrapper.driver.quit()
-        location = f'./Transcripts/{self.title}.txt'
-        with open(location, 'x') as file:
-            file.write(self.transcript)
+        Title = self.title.get(1.0, "end-1c")
+        Agenda = self.agenda.get(1.0, "end-1c") 
+        location = f'./Transcripts/{Title}.txt'
+        with open(location, 'w') as file:
+            file.write("Title:\n" + Title + "\n" + "Agenda:\n" + Agenda + "\n" + self.final_transcript)
             messagebox.showinfo('Transcript Info',f'Generated Transcript is saved at {os.path.abspath(location)}')
             time.sleep(5)
             print("Stopping")
