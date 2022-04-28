@@ -1,16 +1,22 @@
 from Include.Dependencies.Initial import *
 from Include.Dependencies.Splash import Splash
 from Include.Dependencies.Scrapper import *
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib import style
 from tkinter.constants import (
     LEFT,
     NORMAL,
     WORD,
     END
 )
+from tkinter import filedialog as fd
 import ctypes
+import requests
 from datetime import datetime
 ctypes.windll.shcore.SetProcessDpiAwareness(1)
 themes = ["light", "dark"]
+style.use("ggplot")
 
 # App Definition
 class App(tk.Tk):
@@ -23,6 +29,11 @@ class App(tk.Tk):
         self.iconbitmap("./Include/Images/icon.ico")
         self.tk.call("source", "sun-valley.tcl")
         self.theme = 0
+        self.interval = 0
+        self.participantsdata = {"x":[0],"y":[0]}
+        self.wpsdata = {"x":[0],"y":[0]}
+        self.wpsstr = ""
+        self.participantcount = 0
         self.play_state = False
         self.final_transcript, self.meet_code, self.generated_transcript, self.speaker, self.prev_speaker = "", "", "", "", ""
         self.scrapper = Scrapper()
@@ -72,9 +83,20 @@ class App(tk.Tk):
             self.group_trag, text="Agenda", font=12, borderwidth=3, highlightthickness=0
         )
         # Agenda Textbox
-        self.agenda = tk.Text(self.agenda_frame, wrap=WORD, bd=0, height=25, width=35)
+        self.agenda = tk.Text(self.agenda_frame, wrap=WORD, bd=0, height=10, width=35)
         self.agenda.pack(pady=10, padx=10)
         self.agenda_frame.pack(side=LEFT, padx=20)
+
+        graphs = plt.Figure(figsize=(5,4), dpi=60)
+        #WPS Graph
+        self.wpsplot = graphs.add_subplot(211)
+        #Participant Graph
+        self.participantsplot = graphs.add_subplot(212)
+
+        self.canvas = FigureCanvasTkAgg(graphs, self.agenda_frame)  
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack()
+        
 
         self.group_trag.pack()
 
@@ -127,6 +149,20 @@ class App(tk.Tk):
         )
         self.mode.pack(side=LEFT, padx=10, pady=10)
 
+        # Summarize Button
+        self.summarize_icon = tk.PhotoImage(
+            file=f"./Include/Images/{themes[(self.theme+1)%2]}/summarize.png"
+        )
+        self.summarize = tk.Button(
+            self.menu_frame,
+            bd=0,
+            width=40,
+            height=40,
+            image=self.summarize_icon,
+            command=self.summarize_text,
+        )
+        self.summarize.pack(side=LEFT, padx=10, pady=10)
+
         # Time Label
         self.time = ttk.Label(self.menu_frame, text="", width=10, font="Segoe-Ui 15")
         self.time.pack(side=LEFT, padx=10, pady=10)
@@ -170,12 +206,17 @@ class App(tk.Tk):
             self.mode_icon = tk.PhotoImage(
                 file=f"./Include/Images/{themes[(self.theme+1)%2]}/theme.png"
             )
+            self.summarize_icon = tk.PhotoImage(
+                file=f"./Include/Images/{themes[(self.theme+1)%2]}/summarize.png"
+            )
             if self.play_state:
                 self.play.configure(image=self.pause_icon)
             else:
                 self.play.configure(image=self.play_icon)
             self.stop.configure(image=self.stop_icon)
             self.mode.configure(image=self.mode_icon)
+            self.summarize.configure(image=self.summarize_icon)
+            self.summarize
         except:
             pass
 
@@ -186,6 +227,23 @@ class App(tk.Tk):
         self.time.configure(text=str(current_time))
         self.time.after(1000, self.update_time)
 
+    # Summarize Text
+    def summarize_text(self):
+        filetypes = (
+            ('text files', '*.txt')
+        )
+        filename = fd.askopenfilename(
+            title='Open a file',
+            initialdir='/',
+            filetypes=filetypes
+        )
+        data = filename.read().replace('\n', '')
+        response = requests.post('http://backendIP/upload', data=data, timeout = 30)
+        location = f'./Transcripts/summary.txt'
+        with open(location, 'w') as file:
+            file.write(response)
+
+
     # Update Transcript Text
     def update_transcript(self):
         self.scrapper.extractcaptions(self.getdata)
@@ -195,6 +253,7 @@ class App(tk.Tk):
                 self.final_transcript += "\n" + self.speaker + "\n"
                 self.prev_speaker = self.speaker
             self.final_transcript += self.generated_transcript
+            self.wpsstr += " " + self.generated_transcript + " "
             self.generated_transcript = ""
             self.transcript.insert(END, self.final_transcript)
         self.after(5000, self.update_transcript)
@@ -205,6 +264,7 @@ class App(tk.Tk):
             if(self.scrapper.login(self.meet_code)):
                 print("All processes went smoothly")
                 self.after(1, self.update_transcript)
+                self.after(1, self.update_graphs)
             else:
                 print("Some Error occured !")
         else:
@@ -221,7 +281,6 @@ class App(tk.Tk):
             messagebox.showinfo('Transcript Info',f'Generated Transcript is saved at {os.path.abspath(location)}')
             time.sleep(5)
             print("Stopping")
-        self.destroy()
 
     # Get Meet Code
     def getcode(self, code):
@@ -232,6 +291,28 @@ class App(tk.Tk):
         if(data['Speaker']!="" and data['Transcript']!=""):
             self.speaker = data['Speaker']
             self.generated_transcript = data['Transcript']
+            self.participantcount = data['Users']
+
+    # Update Graphs
+    def update_graphs(self):
+        print("Graph Updated")
+        print(self.wpsdata, self.participantsdata)
+        self.interval += 5
+        self.wpsdata['x'].append(len(self.wpsstr.split()))
+        self.participantsdata['x'].append(self.participantcount)
+        self.wpsdata['y'].append(self.interval)
+        self.participantsdata['y'].append(self.interval)
+        self.wpsstr = ""
+        # WPS
+        self.wpsplot.plot(self.wpsdata['y'], self.wpsdata['x'], "k--")
+        self.wpsplot.fill_between(self.wpsdata['y'], self.wpsdata['x'], color="#539ecd")
+        # Participants
+        self.participantsplot.clear()
+        self.participantsplot.plot(self.participantsdata['y'], self.participantsdata['x'], "k--")
+        self.participantsplot.fill_between(self.participantsdata['y'], self.participantsdata['x'], color="#539ecd")
+        self.canvas.draw_idle() 
+        self.after(60000, self.update_graphs)
+        
 
 # Splash Screen
 def splash():
