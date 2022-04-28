@@ -28,7 +28,7 @@ class Scrapper():
         chrome_options.add_argument('--log-level=3')
         chrome_options.add_argument('--lang=en')
         chrome_options.add_argument("--enable-javascript")
-        chrome_options.add_argument('headless')
+        #chrome_options.add_argument('headless')
         chrome_options.add_argument("user-agent=User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.60 Safari/537.36")
 
         # Specify the path to chromedriver.exe
@@ -45,6 +45,7 @@ class Scrapper():
         self.driver.get(r'https://accounts.google.com/signin/v2/identifier?continue='+\
                          'https://meet.google.com'
                         )     
+        self.driver.fullscreen_window()
 
     # Google Login
     def login(self, meet_code):
@@ -120,12 +121,7 @@ class Scrapper():
             options = self.driver.find_element(By.CSS_SELECTOR,'[aria-label="More options"]')
             options.click()
             time.sleep(1.5)
-            captions = self.driver.find_element(By.CSS_SELECTOR,'[jsname="ARMOIc"]')
-            captions.click()
-            time.sleep(1.5)
-            langeng = self.driver.find_element(By.XPATH,'//*[@id="yDmH0d"]/div[3]/div/div[2]/span/div/div/span/label[2]/div[1]')
-            langeng.click()
-            apply = self.driver.find_element(By.XPATH,'//*[@id="yDmH0d"]/div[3]/div/div[2]/div[3]/div/div[2]/div')
+            apply = self.driver.find_element(By.XPATH,'/html/body/div[4]/div/ul/li[5]')
             apply.click()
             print("Captions turned on...!!")
             return True
@@ -142,12 +138,19 @@ class Scrapper():
                 raise NoSuchElementException
             soup = BeautifulSoup(div,features="html.parser")                     
             speaker = soup.div.contents[0]
-            captions = [a.contents[0] for a in soup.findAll('span', {"class":"CNusmb"})]
+            captions = [a.contents[0] for a in soup.findAll('span')] #, {"class":"CNusmb"}
             for caps in captions:
                 generated_transcript += caps + " "
-            senddata({'Speaker':speaker, 'Transcript':generated_transcript})
+            users = self.driver.execute_script('var count = document.querySelector("#ow3 > div.T4LgNb > div > div:nth-child(9) > div.crqnQb > div.UnvNgf.Sdwpn.P9KVBf > div.jsNRx > div.fXLZ2 > div > div > div:nth-child(2) > div > div").innerText; return count;')
+            print(users)
+            senddata({'Speaker':speaker, 'Transcript':generated_transcript, 'Users':int(users)})
         except:
-            senddata({'Speaker':"", 'Transcript':""})
-        
+            senddata({'Speaker':"", 'Transcript':"", 'Users':0})   
 
-        
+'''
+    var participants = document.getElementsByClassName("zWGUib");
+    var list = [];
+    for (let i = 0; i < participants.length; i++)
+        list.push(participants[i].innerText);
+    return list;
+'''
